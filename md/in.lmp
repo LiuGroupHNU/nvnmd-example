@@ -1,0 +1,130 @@
+
+
+units           metal
+boundary        p p p
+atom_style      atomic
+
+neighbor        1.0 bin
+neigh_modify    every 10 delay 0 check yes
+
+read_data       ./coord.lmp
+replicate 1 1 1
+
+pair_style	nvnmd model.pb
+pair_coeff	* *
+
+variable	run0	equal	25000
+variable	run1	equal	25000
+variable	run2	equal	50000
+variable	run5	equal	15000
+variable	run6	equal	50000
+variable	run7	equal	15000
+variable	run8	equal	1000000
+variable	run9	equal	15000
+variable	run10	equal	25000
+
+variable	temp1	equal	300.0
+variable	temp2	equal	1800.0
+variable	temp4	equal	600.0
+
+variable	dt	    equal	1e-3
+variable	tau	    equal	${dt}*100
+variable	showt	equal	2000
+
+velocity        all create ${temp1} 123456789
+
+#### s1-star-300K
+
+fix             0 all nvt temp ${temp1} ${temp1} ${tau}
+timestep        ${dt}
+thermo_style    custom step pe ke etotal temp press vol
+thermo          ${showt}
+dump            1 all custom ${showt} lammps.dump id type x y z
+dump            TRAJ1 all xyz ${showt} lammps.xyz
+dump_modify     TRAJ1 element Ge Te  format line "%2s           %12.6f      %12.6f       %12.6f"
+run     	    ${run0}
+unfix		    0
+
+
+#### s1-melt-1500K
+
+fix             1 all nvt temp ${temp1} ${temp2} ${tau}
+timestep        ${dt}
+thermo_style    custom step pe ke etotal temp press vol
+thermo          ${showt}
+run     	    ${run1}
+write_restart   nvt1.restart
+unfix		    1
+
+
+
+fix             2 all nvt temp ${temp2} ${temp2} ${tau}
+timestep        ${dt}
+thermo_style    custom step pe ke etotal temp press vol
+thermo          ${showt}
+run     	    ${run2}
+write_restart   nvt2.restart
+unfix		    2
+
+
+#### s3-quench 300K
+
+fix             5 all nvt temp ${temp2} ${temp1} ${tau}
+timestep        ${dt}
+thermo_style    custom step pe ke etotal temp press vol
+thermo         	${showt}
+run     	    ${run5}
+write_restart   nvt5.restart
+unfix           5
+
+
+fix             6 all nvt temp ${temp1} ${temp1} ${tau}
+timestep        ${dt}
+thermo_style    custom step pe ke etotal temp press vol
+thermo         	${showt}
+run     	    ${run6}
+write_restart   nvt6.restart
+unfix           6
+
+
+##### s4-Amo-600K: to increase temperature up to 600K
+
+fix             7 all nvt temp ${temp1} ${temp4} ${tau}
+timestep        ${dt}
+thermo_style    custom step pe ke etotal temp press vol
+thermo         	${showt}
+run     	    ${run7}
+write_restart   nvt7.restart
+unfix           7
+
+
+#### s8-Amo to crys: stable a time in 600K
+
+fix             8 all nvt temp ${temp4} ${temp4} ${tau}
+timestep        ${dt}
+thermo_style    custom step pe ke etotal temp press vol
+thermo         	${showt}
+restart         100000 smc.restart
+run     	    ${run8}
+write_restart   nvt8.restart
+unfix           8
+
+##### 600K -> 300K
+
+fix             9 all nvt temp ${temp4} ${temp1} ${tau}
+timestep        ${dt}
+thermo_style    custom step pe ke etotal temp press vol
+thermo         	${showt}
+run     	    ${run9}
+write_restart   nvt9.restart
+unfix           9
+
+##### 300K -> 300K
+
+fix             10 all nvt temp ${temp1} ${temp1} ${tau}
+timestep        ${dt}
+thermo_style    custom step pe ke etotal temp press vol
+thermo         	${showt}
+run     	    ${run10}
+write_restart   nvt10.restart
+unfix           10
