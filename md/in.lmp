@@ -5,7 +5,7 @@ boundary        p p p
 atom_style      atomic
 
 neighbor        1.0 bin
-neigh_modify    every 10 delay 0 check yes
+neigh_modify    every 10 delay 0 check no
 
 read_data       ./coord.lmp
 replicate 1 1 1
