@@ -1,0 +1,49 @@
+# Au Equilibrium of msst shock dynamics
+# Energy in eV, time in ps, distance in angstroms.
+
+variable		temp equal 300
+variable		press equal 1
+variable		Num equal 10
+
+units			metal
+boundary        	p p p
+
+atom_style	atomic
+lattice		fcc 4.08
+region		sim_box block 0 ${Num} 0 ${Num} 0 ${Num}
+create_box	1 sim_box
+create_atoms	1 box
+
+pair_style		nvnmd model.pb
+pair_coeff		* *
+
+thermo		1000
+atom_modify	sort 10000 0.0
+mass			1 197
+
+# Define initial velocity
+
+velocity		all create 600 123456 mom yes rot yes dist gaussian
+
+# Equilibrate the system
+
+variable		tdamp equal 100*dt
+variable		pdamp equal 1000*dt
+fix			NPT all npt temp ${temp} ${temp} ${tdamp} iso ${press} ${press} ${pdamp}
+
+thermo_style 	custom step cpu temp press ke pe vol density
+thermo          	1000
+
+#Settings
+
+dump            	imf all custom 10000 Coords_ShockCompression0.txt id type x y z vx vy vz
+timestep		1e-3
+
+run			100000
+
+undump		imf
+write_restart	restart.equil_Au
+
+reset_timestep	0
+clear
+jump			in.msst

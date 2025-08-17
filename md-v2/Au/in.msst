@@ -1,0 +1,66 @@
+# Au Equilibrium of msst shock dynamics
+# Energy in eV, time in ps, distance in angstroms.
+
+variable		temp equal 300		
+variable		press equal 1	
+variable		up index 40 45 50 55 60 65 70 75 80 85 90 95 100 
+
+units			metal
+boundary        	p p p
+read_restart	restart.equil_Au
+
+pair_style		nvnmd model.pb
+pair_coeff		* *
+
+neighbor        	0.0 bin
+neigh_modify    every 1 delay 0 check no
+
+thermo		1000
+atom_modify	sort 10000 0.0
+mass			1 197
+
+timestep		1e-3
+
+# MSST fix
+
+fix             msst all msst z ${up} q 36 mu 0.903 tscale 0.02
+
+variable		time equal dt*step
+variable		temp equal temp
+variable		rho equal density
+
+variable		volume equal vol			# volume
+variable		pzz equal pzz				# axial stress
+variable		tau equal 0.5*(pzz-0.5*(pxx+pyy))	# shear stress
+variable		tauvm equal sqrt(0.5*(pzz-pyy)^2+(pzz-pxx)^2+(pxx-pyy)^2)	# Von Mises Stress
+variable		dhug equal f_msst[1]
+variable		dray equal f_msst[2]
+variable		lgr_vel equal f_msst[3]
+variable		lgr_pos equal f_msst[4]
+variable		msst equal econserve
+
+thermo_style 	custom step cpu temp ke pe lx ly lz pxx pyy pzz etotal v_dhug v_dray v_lgr_vel v_lgr_pos v_msst
+thermo		1000
+
+fix 			stress2 all print 1000 "${time} ${temp} ${rho} ${volume} ${pzz} ${tau} ${tauvm} ${dhug} ${dray} ${lgr_vel} ${lgr_pos} ${msst}" screen no file output_${up}.txt title 'time temp rho vol pzz tau tauvm dhug dray lgr_vel lgr_pos msst'
+
+compute		rdf all rdf 100 1 1
+fix			rdf all ave/time 100 1000 100000 c_rdf[*] file RDF_${up}.txt mode vector
+
+# Coordinate
+
+compute		keatom all ke/atom
+compute		peatom all pe/atom
+variable		keatom atom c_keatom
+variable		peatom atom c_peatom
+
+dump		imf all custom 10000 Coords_ShockCompression_${up}.txt id type x y z vx vy vz
+
+run	        	200000
+
+write_restart	restart_shock.${up}
+
+clear
+next			up
+jump			in.msst
+
