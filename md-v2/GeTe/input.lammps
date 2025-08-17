@@ -1,0 +1,29 @@
+units           	metal
+boundary        	p p p
+atom_style      	atomic
+
+neighbor        	1.0 bin
+neigh_modify    every 10 delay 0 check no
+
+read_data       	coord.lmp
+replicate       	4 4 4
+
+pair_style      	nvnmd model.pb 
+pair_coeff      	* *
+
+variable        	temp1   equal   300.0
+
+variable        	dt          equal       1e-3
+variable        	tau         equal       ${dt}*100
+variable        	showt   equal   100
+
+velocity        	all create ${temp1} 123456789
+
+fix             	nvt all nvt temp ${temp1} ${temp1} ${tau}
+timestep        	${dt}
+thermo_style    custom step pe ke etotal temp press vol
+thermo         	100
+run             	10000
+unfix           	nvt
+
+
