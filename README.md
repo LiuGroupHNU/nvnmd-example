@@ -6,6 +6,7 @@
         - [2-1-2 learning_rate](#2-1-2-learning_rate)
         - [2-1-3 loss](#2-1-3-loss)
         - [2-1-4 training](#2-1-4-training)
+        - [2-1-5 model](#2-1-5-model)
     - [2-2 Training](#2-2-training)
 - [3 Testing](#3-testing)
 - [4 Running MD](#4-running-md)
@@ -23,16 +24,17 @@ NVNMD stands for non-von Neumann molecular dynamics.
 
 Any user can follow two consecutive steps to run molecular dynamics (MD) on the proposed NVNMD computer, which has been released online: (i) to train a machine learning (ML) model that can decently reproduce the potential energy surface (PES); and (ii) to deploy the trained ML model on the proposed NVNMD computer, then run MD there to obtain the atomistic trajectories.
 
-The training code can be downloaded from the [website](https://github.com/LiuGroupHNU/deepmd-kit/tree/devel), which we used to generate the results in our paper entitled "Accurate and Efficient Molecular Dynamics based on Machine Learning and Non Von Neumann Architecture", which has been accepted by npj Computational Materials ([DOI: 10.1038/s41524-022-00773-z](https://www.nature.com/articles/s41524-022-00773-z)).
+The training code can be downloaded from the [website](https://github.com/LiuGroupHNU/deepmd-kit/tree/devel). This codebase was used to generate the results reported for NVNMD-v1 in our paper entitled "Accurate and Efficient Molecular Dynamics based on Machine Learning and Non Von Neumann Architecture", which has been accepted by npj Computational Materials ([DOI: 10.1038/s41524-022-00773-z](https://www.nature.com/articles/s41524-022-00773-z)). The same training framework has been extended for NVNMD-v2 (“NVNMD-v2: Scalable and Accurate Deep Learning Molecular Dynamics Model Based on Non-Von Neumann Architectures” , manuscript ID: ct-2025-01050u, submitted to ACS Journal of Chemical Theory and Computation), which introduces an optimized descriptor to support multi-element systems .
 
-This is the complete example including files used to test training and running MD functions of NVNMD. The file structure is as follows.
+This repository provides complete examples for training and running MD on both NVNMD-v1 and NVNMD-v2. The file structure is as follows.
 
 * `data`: training and testing data set.
 * `train/train_cnn.json`: input script of the continuous neural network (CNN) training.
 * `train/train_qnn.json`: input script of the quantized neural network (QNN) training.
-* `md/coord.lmp`: data file containing initial atom coordinates.
-* `md/in.lmp`: input script of the molecular dynamics simulation.
-* `md/model.pb`: model file obtained by QNN training.
+* `md/coord.lmp`: data file containing initial atom coordinates for NVNMD-v1 examples.
+* `md/in.lmp`: input script of the molecular dynamics simulation for NVNMD-v1 examples.
+* `md/model.pb`: model file obtained by QNN training (NVNMD-v1).
+* `md-v2`: NVNMD-v2 LAMMPS run scripts for the three example systems (Au, GeTe and Ferro).  Each case folder also contains the corresponding training JSONs, and all datasets can be downloaded from AIS Square: [website](https://www.aissquare.com/datasets).
 
 # 2 Training
 
@@ -75,7 +77,8 @@ The structure of the input script is as follows
     "nvnmd" : {},
     "learning_rate" : {},
     "loss" : {},
-    "training": {}
+    "training": {},
+    "model": {}
 }
 ```
 
@@ -85,22 +88,34 @@ The "nvnmd" section is defined as
 
 ```json
 {
+    "version": 0,
+    "max_nnei": 128,
     "net_size":128,
     "sel":[60, 60],
     "rcut":6.0,
-    "rcut_smth":0.5
+    "rcut_smth":0.5,
+    "type_map": ["Ge", "Te"]
 }
 ```
 
 where items are defined as:
 
-| Item      | Mean                        | Optional Value                                |
-| --------- | --------------------------- | --------------------------------------------- |
-| net_size  | the size of nueral network  | 128                                     |
-| sel       | the number of neighbors     | integer list of lengths 1 to 4 are acceptable |
-| rcut      | the cutoff radial           | (0, 8.0]                                      |
-| rcut_smth | the smooth cutoff parameter | (0, 8.0]                                      |
+| Item      | Mean                                                         | Optional Value                                               |
+| --------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| version   | the version of network structure                             | 0: `NVNMD-v1`; 1: `NVNMD-v2`                                 |
+| max_nnei  | the maximum number of neighbors that do not distinguish element types | 128 or 256                                                   |
+| net_size  | the size of nueral network                                   | 128                                                          |
+| sel       | the number of neighbors                                      | `NVNMD-v1`: integer list of lengths 1 to 4 are acceptable; `NVNMD-v2`: integer |
+| rcut      | the cutoff radial ($\AA$)                                    | (0, 8.0]                                                     |
+| rcut_smth | the smooth cutoff parameter ($\AA$)                          | (0, 8.0]                                                     |
+| type_map  | mapping atom type to the name (str) of the type              | string list, optional                                        |
 
+Multiple versions of the NVNMD model correspond to different network structures. `NVNMD-v1` and `NVNMD-v2` differ in the following ways:
+
+1. `NVNMD-v1` and `NVNMD-v2` use the `se_a` descriptor and `se_atten` descriptor, respectively
+2. `NVNMD-v1` has 1 set of parameters for each element and supports up to 4 element types. `NVNMD-v2` shares 1 set of parameters for each element and supports up to 31 types.
+3. `NVNMD-v1` distinguishes between neighboring atoms, so `sel` is a list of integers. `NVNMD-v2` does not distinguish between neighboring atoms, so `sel` is an integer.
+   
 ### 2-1-2 learning_rate
 
 The "learning_rate" section is defined as 
@@ -185,6 +200,41 @@ where items are defined as:
 | set_prefix | the prefix of dataset                               | a string           |
 | batch_size | a list of batch size of corresponding dataset       | a integer list     |
 
+### 2-1-5 model
+
+The `model` section of the training JSON specifies the neural-network architecture used for descriptor (embedding) extraction and the fitting network that maps embeddings to scalar energies (and forces). Section **2-1-1** already documents the top-level `nvnmd` keys (e.g. `version`, `sel`, `rcut`, `rcut_smth`, `type_map`) which determine descriptor selection and neighbor handling; here we focus on the **network structure** and the `model` block that contains the per-model defaults shown in the configuration file.
+
+> **Note:** In NVNMD the `model` block is often optional for users because the framework provides sensible defaults. We list them here explicitly for reproducibility. Users may override any field in their JSON if customization is needed.
+
+The "model" section is defined as (used for the GeTe `NVNMD-v2` example): 
+
+```json
+"model": {
+    "descriptor": {
+        "type": "se_atten",
+        "sel": 256,
+        "rcut": 8.0,
+        "rcut_smth": 2.0,
+        "neuron": [8, 16, 32]
+    },
+    "fitting_net": {
+        "neuron": [128, 128, 128]
+    },
+    "type_map": ["Ge", "Te"]
+}
+```
+
+As mentioned above, `NVNMD-v1` use the `se_a` descriptor, while `NVNMD-v2` use the `se_atten` descriptor: 
+
+| Topic                         | `se_a` (NVNMD-v1)                                            | `se_atten` (NVNMD-v2)                                        |
+| ----------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| Descriptor type               | per-type descriptor branches                                 | Attention-augmented descriptor with type embeddings          |
+| Input to embedding net        | neighbors distinguished by element type                      | Concatenated neighbors and atom types                        |
+| `sel`                         | List per type (e.g., `[60,60]`) — neighbor counts per type   | Single integer (e.g., `256`) — unified neighbor slots        |
+| Parameterization across types | Separate embedding parameters per element (up to 4 types practical) | Shared embedding network with learned type embeddings (scales to many types) |
+| Embedding network             | via `neuron` (typical: `[8,16,32]`)                          | via `neuron` (typical: `[8,16,32]`)                          |
+| Fitting network               | Fully connected FittingNet, typical sizes: `[128,128,128]`   | Fully connected FittingNet, typical sizes: `[128,128,128]`   |
+
 ## 2-2 Training
 
 Training can be invoked by
@@ -198,6 +248,22 @@ dp train-nvnmd train_qnn.json -s s2
 
 After training process, you will get two folders: `nvnmd_cnn` and `nvnmd_qnn`. The `nvnmd_cnn` contains the model after continuous neural network (CNN) training. The `nvnmd_qnn` contains the model after quantized neural network (QNN) training. The binary file `nvnmd_qnn/model.pb` is the model file which is used to perform NVNMD in server [http://nvnmd.picp.vip]
 
+You can also restart the CNN training from the path prefix of checkpoint files (`nvnmd_cnn/model.ckpt`) by
+
+```bash
+dp train-nvnmd train_cnn.json -r nvnmd_cnn/model.ckpt -s s1
+```
+
+You can also initialize the CNN model and train it by
+
+```bash
+mv nvnmd_cnn nvnmd_cnn_bck
+cp train_cnn.json train_cnn2.json
+# please edit train_cnn2.json
+dp train-nvnmd train_cnn2.json -s s1 -i nvnmd_cnn_bck/model.ckpt
+```
+
+> **Note:** Training recipes and example JSONs for `NVNMD-v2` are provided in this repository under the `md-v2/` directories (for example `md-v2/GeTe/`, `md-v2/Au/`, `md-v2/Ferro/`). Each per-case folder contains the per-case training JSON(s). To train `NVNMD-v2` models you may either (a) use the provided v2 JSON directly, or (b) set `"version": 1` in the `nvnmd` block of your training JSON and run the same CLI above.
 
 # 3 Testing
 
