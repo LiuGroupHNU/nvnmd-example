@@ -106,8 +106,8 @@ where items are defined as:
 | max_nnei  | the maximum number of neighbors that do not distinguish element types | 128 or 256                                                   |
 | net_size  | the size of nueral network                                   | 128                                                          |
 | sel       | the number of neighbors                                      | `NVNMD-v1`: integer list of lengths 1 to 4 are acceptable; `NVNMD-v2`: integer |
-| rcut      | the cutoff radial ($\AA$)                                    | (0, 8.0]                                                     |
-| rcut_smth | the smooth cutoff parameter ($\AA$)                          | (0, 8.0]                                                     |
+| rcut      | the cutoff radial (Å)                                    | (0, 8.0]                                                     |
+| rcut_smth | the smooth cutoff parameter (Å)                          | (0, 8.0]                                                     |
 | type_map  | mapping atom type to the name (str) of the type              | string list, optional                                        |
 
 Multiple versions of the NVNMD model correspond to different network structures. `NVNMD-v1` and `NVNMD-v2` differ in the following ways:
