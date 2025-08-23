@@ -1,0 +1,56 @@
+{
+  "nvnmd": {
+    "version": 1,
+    "max_nnei": 256,
+    "net_size": 128,
+    "sel": 256,
+    "rcut": 6.0,
+    "rcut_smth": 0.5,
+    "type_map" : [
+   "Ba",
+   "Pb",
+   "Ca",
+   "Sr",
+   "Bi",
+   "K",
+   "Na",
+   "Hf",
+   "Ti",
+   "Zr",
+   "Nb",
+   "Mg",
+   "In",
+   "Zn",
+   "O"
+]
+  },
+  "learning_rate": {
+    "type": "exp",
+    "start_lr": 1e-9,
+    "stop_lr": 1e-09,
+    "decay_steps": 1
+  },
+  "loss": {
+    "start_pref_e": 1,
+    "limit_pref_e": 1,
+    "start_pref_f": 1,
+    "limit_pref_f": 1,
+    "start_pref_v": 0,
+    "limit_pref_v": 0
+  },
+  "training": {
+    "seed": 1,
+    "stop_batch": 1,
+    "numb_test": 5,
+    "disp_file": "nvnmd_qnn/lcurve.out",
+    "disp_freq": 1,
+    "save_ckpt": "nvnmd_qnn/model.ckpt",
+    "save_freq": 1,
+    "training_data": {
+      "systems": "/home/data-0704",
+   "batch_size": "auto",
+   "_comment": "that's all",
+   "auto_prob": "prob_sys_size"	
+    }
+  }
+}
