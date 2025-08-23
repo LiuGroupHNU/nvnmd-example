@@ -1,0 +1,41 @@
+{
+  "nvnmd": {
+    "version": 1,
+    "net_size": 128,
+    "max_nnei": 256,
+    "sel": 256,
+    "rcut": 8.0,
+    "rcut_smth": 2.0,
+    "type_map" : ["Ge", "Te"]
+  },
+  "learning_rate": {
+    "type": "exp",
+    "start_lr": 1e-9,
+    "stop_lr": 1e-9,
+    "decay_steps": 1
+  },
+  "loss": {
+    "start_pref_e": 1,
+    "limit_pref_e": 1,
+    "start_pref_f": 1,
+    "limit_pref_f": 1,
+    "start_pref_v": 0,
+    "limit_pref_v": 0
+  },
+  "training": {
+    "seed": 1,
+    "stop_batch": 1,
+    "numb_test": 1,
+    "disp_file": "lcurve.out",
+    "disp_freq": 1,
+    "save_ckpt": "model.ckpt",
+    "save_freq": 1,
+    "training_data": {
+      "systems": [
+              "/home/GeTe-kappa/train_Ge108Te108_data",
+     	    "/home/GeTe-kappa/train_Ge96Te96_data"
+      ],
+      "batch_size": "auto"
+    }
+  }
+}
